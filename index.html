@@ -13,12 +13,9 @@ const rules=[
 {re:/長輩|老人|媽媽|爸爸|走路慢/,name:'同行照顧',fact:'提到長輩或行動較慢的同行者',predict:'可詢問是否偏好靠近入口、減少步行的座位',solve:'若顧客同意，優先建議步行距離較短的座位',alt:'若靠近入口的位置不足，確認其他方便抵達的座位'},
 {re:/生日|慶生|蛋糕|紀念日/,name:'特殊場合',fact:'提出慶祝活動相關需求',predict:'可確認攜帶蛋糕、布置或慶祝服務規則',solve:'產生特殊場合備註供店家參考',alt:'若無法提供慶祝服務，建議採簡化方式進行'}];
 const $=id=>document.getElementById(id);function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function preset(i){$('need').value=samples[i]}
-function analyze(){
-$('aiStatus').textContent='✓ 免費規則式分析完成（非大型語言模型AI；結果僅供競賽模擬）。';const t=$('need').value.trim();if(!t){alert('請先輸入用餐需求');return}const found=rules.filter(r=>r.re.test(t));if(!found.length)found.push({name:'一般用餐需求',fact:'已收到描述，但目前離線規則尚無法分類',predict:'建議保留原文，進一步詢問顧客需求',solve:'將原始描述整理為店家備註',alt:'若店家無法處理，請顧客補充具體需求'});plan={text:t,found,selected:found.map((_,i)=>i)};$('facts').innerHTML=found.map(r=>`<div class="item"><span class="pill">已辨識</span><b>${esc(r.name)}</b><div class="sub">${esc(r.fact)}</div></div>`).join('');$('predictions').innerHTML=found.map(r=>`<div class="item"><span class="pill gold">待確認</span>${esc(r.predict)}</div>`).join('');$('solutions').innerHTML=found.map(r=>`<div class="solution"><b>${esc(r.name)}</b><div>${esc(r.solve)}</div></div>`).join('');$('alternatives').innerHTML=found.map(r=>`<div class="item"><span class="pill blue">備案</span>${esc(r.alt)}</div>`).join('');$('taskList').innerHTML=found.map((r,i)=>`<label class="checkrow"><input type="checkbox" data-task="${i}" checked><span>${esc(r.solve)}</span></label>`).join('');$('arrivalMessage').innerHTML='';$('results').classList.remove('hidden');$('results').scrollIntoView({behavior:'smooth',block:'start'})}
-function makeText(){if(!plan)return '';const chosen=[...document.querySelectorAll('[data-task]:checked')].map(el=>plan.found[+el.dataset.task]);return ['AI友膳 V2.5｜競賽智慧服務建議卡','【顧客描述】',plan.text,'【已辨識需求】',...plan.found.map(r=>'• '+r.name+'：'+r.fact),'【建議店家參考事項】',...chosen.map(r=>'• '+r.solve),'【潛在問題／待確認】',...plan.found.map(r=>'• '+r.predict),'【替代方案】',...plan.found.map(r=>'• '+r.alt),'註：本卡為競賽測試建議，未經任何真實店家確認；過敏與安全事項須實際核實。'].join('\n')}
 async function copyPlan(){const t=makeText();try{await navigator.clipboard.writeText(t);alert('已複製服務建議卡')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();alert('已嘗試複製，請檢查剪貼簿')}}function downloadPlan(){if(!plan)return;const blob=new Blob([makeText()],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='AI友膳_V2.5_服務建議卡.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}function arrive(){$('arrivalMessage').innerHTML='<div class="scenario status">✓ 已模擬按下抵達通知（未發送給真實餐廳，也沒有店家接收）。</div>'}function speak(){const Rec=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Rec){$('voiceStatus').textContent='目前瀏覽器不支援語音辨識，請改用文字輸入。';return}const r=new Rec();r.lang='zh-TW';r.onresult=e=>{$('need').value+=( $('need').value?' ':'')+e.results[0][0].transcript;$('voiceStatus').textContent='已填入語音辨識文字，請先檢查是否正確。'};r.onerror=e=>$('voiceStatus').textContent='語音輸入未成功：'+e.error;r.start()}preset(0);
 
-// V2.3: static demonstration menu; all dish metadata is illustrative, not verified restaurant data.
+// V2.5 fictional demonstration menu; all metadata is illustrative, not verified restaurant data.
 const demoMenu=[
 {name:'烤鮭魚飯',price:220,ingredients:'鮭魚、白飯、時蔬',tags:['balanced','protein','light'],beef:false,pork:false,veg:false,hotSoup:false,reason:'有魚類蛋白質及蔬菜，可詢問調味與油脂用量'},
 {name:'小黃瓜壽司組合',price:120,ingredients:'小黃瓜、米飯、海苔',tags:['light','balanced'],beef:false,pork:false,veg:true,hotSoup:false,reason:'冷食且較易分次取用，但蛋白質來源可能不足'},
@@ -27,11 +24,6 @@ const demoMenu=[
 {name:'牛肉丼飯',price:250,ingredients:'牛肉、白飯、洋蔥',tags:['protein'],beef:true,pork:false,veg:false,hotSoup:false,reason:'含牛肉，若不吃牛肉應排除'},
 {name:'豆腐蔬菜飯',price:190,ingredients:'豆腐、蔬菜、白飯（調味未驗證）',tags:['balanced','light','protein'],beef:false,pork:false,veg:true,hotSoup:false,reason:'有植物性蛋白質及蔬菜，仍須確認調味與實際份量'}
 ];
-function getPreferences(t){let restriction=$('restriction').value;if(restriction==='auto'){restriction=/不吃牛|不能吃牛|忌牛/.test(t)?'beef':/不吃豬|不能吃豬|忌豬/.test(t)?'pork':/素食|全素|蛋奶素/.test(t)?'vegetarian':'none'}let handling=$('handling').value;if(handling==='auto')handling=/輪椅|端不穩|端取|端起|不方便拿|拿不穩/.test(t)?'easy':'none';let goal=$('goal').value;if(goal==='balanced'&&/少油|清爽|清淡/.test(t))goal='light';if(goal==='balanced'&&/高蛋白|蛋白質/.test(t))goal='protein';const m=t.match(/(?:預算|不超過|以內)[^0-9]{0,5}(\d{2,4})/);const budget=m?Math.min(Number($('budget').value),Number(m[1])):Number($('budget').value);return {restriction,handling,goal,budget,allergy:/過敏/.test(t)} }
-function renderMenu(t){const p=getPreferences(t);let options=demoMenu.filter(m=>m.price<=p.budget&&!(p.restriction==='beef'&&m.beef)&&!(p.restriction==='pork'&&m.pork)&&!(p.restriction==='vegetarian'&&!m.veg));options.sort((a,b)=>((b.tags.includes(p.goal)?3:0)-(b.hotSoup&&p.handling==='easy'?3:0))-((a.tags.includes(p.goal)?3:0)-(a.hotSoup&&p.handling==='easy'?3:0))||a.price-b.price);plan.menu=options.slice(0,4);plan.prefs=p;const warning=p.allergy?'<div class="notice"><b>過敏安全提醒：</b>示範菜單沒有經驗證的過敏原與交叉接觸資料，以下均不可視為安全餐點。請先向店家確認，無法確認時不要選用。</div>':'';const list=plan.menu.length?plan.menu.map((m,i)=>`<div class="item"><b>${i+1}. ${esc(m.name)}</b> <span class="pill">假設 NT$${m.price}</span><div class="sub">示範食材：${esc(m.ingredients)}</div><div>${esc(m.reason)}</div>${m.hotSoup&&p.handling==='easy'?'<div class="sub">⚠ 熱湯端取可能需要協助</div>':''}<div class="sub">${m.tags.includes(p.goal)?'符合所選的一般飲食偏好':'其他可比較選擇'}・成分與營養資訊未驗證</div></div>`).join(''):'<div class="notice">示範菜單中沒有符合預算及限制的餐點。請調整條件，或請店家提供其他選擇。</div>';$('menuResults').innerHTML=warning+list+'<p class="sub">排序是離線規則示範，不是AI營養診斷，也不保證菜單符合個別健康需求。</p>'}
-const oldAnalyze=analyze;analyze=function(){oldAnalyze();if(plan)renderMenu(plan.text)};
-const oldMakeText=makeText;makeText=function(){let base=oldMakeText();if(plan?.ai){const checked=[...document.querySelectorAll('[data-aitask]:checked')].map(el=>plan.aiTasks[+el.dataset.aitask]);base=['AI友膳 V2.5｜真正AI競賽服務建議卡','【顧客描述】',plan.text,'【AI理解需求】',...plan.found.map(x=>'• '+x.name+'：'+x.fact),'【建議行動】',...checked.map(x=>'• '+x),'【示範菜單推薦】',...plan.menu.map(m=>'• '+m.name+'：'+m.reason),'註：AI結果可能有誤，虛構菜單，未經店家確認。'].join('\n');return base}if(plan&&plan.menu){base+='\n【示範菜單推薦（虛構資料）】\n'+plan.menu.map(m=>'• '+m.name+'（假設NT$'+m.price+'）：'+m.reason).join('\n')+'\n注意：推薦不代表過敏安全、營養保證或店家可提供。'}return base};
-
 // V2.5: fully offline, deterministic rule engine. Not an LLM or a verified restaurant service.
 const v25Contains=(t,patterns)=>patterns.some(x=>x.test(t));
 function v25Parse(text){
@@ -122,10 +114,10 @@ function v25Analyze(){
  $('aiStatus').textContent='✓ V2.5 免費規則式分析完成；未呼叫付費API。';
  $('results').scrollIntoView({behavior:'smooth',block:'start'});
 }
-analyze=v25Analyze;
-makeText=function(){
+function analyze(){v25Analyze();}
+function makeText(){
  if(!plan)return '';
  const chosen=[...document.querySelectorAll('[data-aitask]:checked')].map(el=>{const i=Number(el.dataset.aitask);const state=$('taskstate'+i).value;return '• ['+state+'] '+plan.aiTasks[i]});
  return ['AI友膳 V2.5｜規則式服務建議卡（競賽模擬）','【原始需求】',plan.text,'【條件衝突】',...(plan.v25.conflicts.length?plan.v25.conflicts:['未偵測到預設衝突，仍須人工確認']),'【餐前待確認】',...plan.v25.unknown,'【建議店家事項】',...chosen,'【示範菜單推薦】',...plan.menu.map(m=>'• '+m.name+'（假設 NT$'+m.price+'）：'+m.reasons.join('；')),'【重要聲明】','本系統為免費離線規則式原型，非大型語言模型。所有菜單、價格、店家服務及狀態皆為模擬；過敏原及服務需向真實店家確認。'].join('\n');
-};
+}
 </script></body></html>
